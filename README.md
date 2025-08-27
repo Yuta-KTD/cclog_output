@@ -173,6 +173,7 @@ This command will:
 - Resume conversations directly from the browser
 - Export sessions to Markdown files with structured formatting
 - Export sessions with empty messages filtered out for cleaner documentation
+- Bulk export all project sessions to Markdown files in one command
 - Performance optimized with Python helper script for large conversation histories
 - Stream-based processing for efficient memory usage
 - Duration and message count columns in the conversation list
