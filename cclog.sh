@@ -137,7 +137,7 @@ __cclog_browse() {
         --height="100%" \
         --ansi \
         --bind "ctrl-r:execute(claude -r {-1})+abort" \
-        --expect="ctrl-v,ctrl-p,ctrl-e")
+        --expect="ctrl-v,ctrl-p,ctrl-e,ctrl-f")
 
     # Process result
     if [ -n "$result" ]; then
@@ -170,6 +170,20 @@ __cclog_browse() {
                     echo "Exporting session to Markdown..."
                     if "$CCLOG_PYTHON" "$CCLOG_HELPER_SCRIPT" export "$selected_file" "claude_chat"; then
                         echo "Export completed successfully!"
+                    else
+                        echo "Export failed!" >&2
+                    fi
+                else
+                    echo "Error: Python 3 is required for export" >&2
+                fi
+                ;;
+            ctrl-f)
+                # Export to Markdown with empty messages filtered
+                local selected_file="$claude_projects_dir/${full_id}.jsonl"
+                if [ -f "$CCLOG_HELPER_SCRIPT" ] && [ -n "$CCLOG_PYTHON" ]; then
+                    echo "Exporting session to Markdown (filtered)..."
+                    if "$CCLOG_PYTHON" "$CCLOG_HELPER_SCRIPT" export-filtered "$selected_file" "claude_chat"; then
+                        echo "Export (filtered) completed successfully!"
                     else
                         echo "Export failed!" >&2
                     fi
@@ -251,22 +265,58 @@ cclog() {
         fi
         __cclog_info "$1"
         ;;
+    export-all-filtered | eaf)
+        shift
+        # Export all sessions in current project to filtered Markdown
+        local target_dir="${1:-$(pwd)}"
+        
+        # Convert "/" to "-" and "." to "-" for project directory name
+        local project_dir=$(echo "$target_dir" | sed 's/\//-/g; s/\./-/g')
+        local claude_projects_dir="$HOME/.claude/projects/$project_dir"
+        
+        # Check if the directory exists
+        if [ ! -d "$claude_projects_dir" ]; then
+            echo "No Claude logs found for this project: $target_dir" >&2
+            return 1
+        fi
+        
+        # Use Python helper for bulk export
+        if [ -f "$CCLOG_HELPER_SCRIPT" ] && [ -n "$CCLOG_PYTHON" ]; then
+            echo "Exporting all sessions to Markdown (filtered)..."
+            if "$CCLOG_PYTHON" "$CCLOG_HELPER_SCRIPT" export-all-filtered "$claude_projects_dir" "claude_chat"; then
+                echo "Bulk export completed successfully!"
+            else
+                echo "Bulk export failed!" >&2
+                return 1
+            fi
+        else
+            echo "Error: Python 3 is required for bulk export" >&2
+            return 1
+        fi
+        ;;
     help | h | --help | -h)
         cat <<EOF
 cclog - Browse Claude Code conversation history
 
 Usage:
-    cclog [options]           Browse sessions in current directory
-    cclog projects            Browse all projects
-    cclog view <session>      View session content
-    cclog info <session>      Show session information
-    cclog help               Show this help message
+    cclog [options]                   Browse sessions in current directory
+    cclog projects                    Browse all projects
+    cclog view <session>              View session content
+    cclog info <session>              Show session information
+    cclog export-all-filtered [dir]  Export all sessions to Markdown (filtered)
+    cclog help                        Show this help message
 
 Options:
     projects, p                       Browse all projects
     view, v                          View session content
     info, i                          Show session information
+    export-all-filtered, eaf         Export all sessions to filtered Markdown
     help, h, --help, -h              Show help
+
+Key bindings (in fzf browser):
+    Enter: Return session ID, Ctrl-v: View log, Ctrl-p: Return path
+    Ctrl-r: Resume conversation, Ctrl-e: Export to Markdown
+    Ctrl-f: Export to Markdown (filtered)
 EOF
         ;;
     *)

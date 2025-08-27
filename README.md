@@ -109,6 +109,7 @@ cclog
 - `Ctrl-P`: Return the file path
 - `Ctrl-R`: Resume the conversation with `claude -r`
 - `Ctrl-E`: Export session to Markdown file
+- `Ctrl-F`: Export session to Markdown file with empty messages filtered
 
 ### List all projects
 
@@ -136,6 +137,27 @@ cclog view ~/.claude/projects/*/session-id.jsonl
 cclog info ~/.claude/projects/*/session-id.jsonl
 ```
 
+### Export all sessions to Markdown
+
+Export all conversation sessions in the current project to filtered Markdown files:
+
+```bash
+cclog export-all-filtered
+```
+
+Or specify a different project directory:
+
+```bash
+cclog export-all-filtered /path/to/project
+```
+
+This command will:
+- Process all `.jsonl` files in the project's Claude logs directory
+- Create filtered Markdown files (with empty messages removed) in the `claude_chat` directory
+- Show progress for each file processed
+- Skip invalid or corrupted session files
+- Provide a summary of processed and skipped files
+
 ## Requirements
 
 - `fzf` - Fuzzy finder
@@ -150,6 +172,7 @@ cclog info ~/.claude/projects/*/session-id.jsonl
 - Browse all projects across your system sorted by recent activity
 - Resume conversations directly from the browser
 - Export sessions to Markdown files with structured formatting
+- Export sessions with empty messages filtered out for cleaner documentation
 - Performance optimized with Python helper script for large conversation histories
 - Stream-based processing for efficient memory usage
 - Duration and message count columns in the conversation list

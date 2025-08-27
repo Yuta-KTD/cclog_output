@@ -824,6 +824,242 @@ def export_markdown(file_path, output_dir="claude_chat"):
         print(f"Error exporting to Markdown: {e}")
         return False
 
+def filter_empty_messages(markdown_content):
+    """Filter out empty messages (sections with no content between ## User/Assistant)"""
+    filtered_content = []
+    i = 0
+    
+    while i < len(markdown_content):
+        line = markdown_content[i]
+        
+        # Check if this is a message header
+        if line.startswith("## User") or line.startswith("## Assistant"):
+            # Look for the next message header or end of content
+            next_header_index = i + 1
+            while next_header_index < len(markdown_content) and not (
+                markdown_content[next_header_index].startswith("## User") or 
+                markdown_content[next_header_index].startswith("## Assistant")
+            ):
+                next_header_index += 1
+            
+            # Extract the content between this header and the next
+            section_content = markdown_content[i+1:next_header_index]
+            
+            # Check if section has meaningful content (not just empty lines or whitespace)
+            has_content = False
+            for content_line in section_content:
+                # Skip empty lines and lines with only whitespace
+                if content_line.strip():
+                    # Check if it's not just a tool header without content
+                    if not (content_line.startswith("### Tool") and 
+                           len([l for l in section_content if l.strip() and not l.startswith("###")]) == 0):
+                        has_content = True
+                        break
+            
+            # Only include the section if it has meaningful content
+            if has_content:
+                filtered_content.append(line)  # Add header
+                filtered_content.extend(section_content)  # Add content
+            
+            # Move to the next header
+            i = next_header_index
+        else:
+            # Not a message header, add as-is
+            filtered_content.append(line)
+            i += 1
+    
+    return filtered_content
+
+
+def export_markdown_filtered(file_path, output_dir="claude_chat"):
+    """Export session to Markdown format with empty messages filtered out"""
+    import os
+    from pathlib import Path
+    from datetime import datetime
+    
+    try:
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Convert file_path to Path object for parse_session_minimal
+        file_path_obj = Path(file_path)
+        
+        # Parse session info for metadata
+        session_info = parse_session_minimal(file_path_obj)
+        if not session_info:
+            print(f"Error: Could not parse session info from {file_path}")
+            return False
+            
+        # Generate output filename with _filtered suffix
+        session_id = os.path.basename(file_path).replace('.jsonl', '')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_filename = f"{session_id}_filtered_{timestamp}.md"
+        output_path = os.path.join(output_dir, output_filename)
+        
+        # Start building markdown content
+        markdown_content = []
+        markdown_content.append(f"# Claude Code Session {session_id} (Filtered)")
+        markdown_content.append("")
+        
+        # Add session metadata
+        if session_info.start_timestamp:
+            start_date = session_info.start_timestamp.strftime("%Y-%m-%d")
+            markdown_content.append(f"**Date**: {start_date}")
+        
+        if session_info.duration_seconds > 0:
+            duration_str = session_info.formatted_duration
+            markdown_content.append(f"**Duration**: {duration_str}")
+            
+        if session_info.line_count:
+            markdown_content.append(f"**Messages**: {session_info.line_count}")
+        
+        if session_info.matched_summaries:
+            summary_text = ", ".join(session_info.matched_summaries)
+            markdown_content.append(f"**Summary**: {summary_text}")
+            
+        markdown_content.append("")
+        markdown_content.append("---")
+        markdown_content.append("")
+        
+        # Process messages
+        message_content = []
+        with open(file_path, "r") as f:
+            for line in f:
+                try:
+                    data = json.loads(line.strip())
+                    formatted_message = format_markdown_message(data)
+                    if formatted_message:
+                        message_content.extend(formatted_message.split('\n'))
+                except (json.JSONDecodeError, KeyError, TypeError):
+                    # Skip malformed lines
+                    continue
+        
+        # Filter out empty messages
+        filtered_messages = filter_empty_messages(message_content)
+        markdown_content.extend(filtered_messages)
+        
+        # Write to file
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(markdown_content))
+            
+        print(f"Exported (filtered) to: {output_path}")
+        return True
+        
+    except Exception as e:
+        print(f"Error exporting to Markdown: {e}")
+        return False
+
+def export_all_sessions_filtered(claude_projects_dir, output_dir="claude_chat"):
+    """Export all sessions in a directory to Markdown format with empty messages filtered"""
+    import os
+    from pathlib import Path
+    from datetime import datetime
+    
+    try:
+        # Convert to Path object for consistent handling
+        projects_path = Path(claude_projects_dir)
+        
+        if not projects_path.exists():
+            print(f"Error: Directory {claude_projects_dir} does not exist")
+            return False
+            
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Find all .jsonl files in the directory
+        jsonl_files = list(projects_path.glob("*.jsonl"))
+        
+        if not jsonl_files:
+            print(f"No .jsonl files found in {claude_projects_dir}")
+            return True
+            
+        print(f"Found {len(jsonl_files)} session files to process...")
+        
+        processed_count = 0
+        skipped_count = 0
+        
+        for i, jsonl_file in enumerate(jsonl_files, 1):
+            print(f"[{i}/{len(jsonl_files)}] Processing {jsonl_file.name}...")
+            
+            try:
+                # Parse session info for metadata (skip if can't parse)
+                session_info = parse_session_minimal(jsonl_file)
+                if not session_info:
+                    print(f"  Skipping {jsonl_file.name}: Could not parse session info")
+                    skipped_count += 1
+                    continue
+                    
+                # Generate output filename with _filtered suffix and timestamp
+                session_id = jsonl_file.stem
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_filename = f"{session_id}_filtered_{timestamp}.md"
+                output_path = os.path.join(output_dir, output_filename)
+                
+                # Start building markdown content
+                markdown_content = []
+                markdown_content.append(f"# Claude Code Session {session_id} (Filtered)")
+                markdown_content.append("")
+                
+                # Add session metadata
+                if session_info.start_timestamp:
+                    start_date = session_info.start_timestamp.strftime("%Y-%m-%d")
+                    markdown_content.append(f"**Date**: {start_date}")
+                
+                if session_info.duration_seconds > 0:
+                    duration_str = session_info.formatted_duration
+                    markdown_content.append(f"**Duration**: {duration_str}")
+                    
+                if session_info.line_count:
+                    markdown_content.append(f"**Messages**: {session_info.line_count}")
+                
+                if session_info.matched_summaries:
+                    summary_text = ", ".join(session_info.matched_summaries)
+                    markdown_content.append(f"**Summary**: {summary_text}")
+                    
+                markdown_content.append("")
+                markdown_content.append("---")
+                markdown_content.append("")
+                
+                # Process messages
+                message_content = []
+                with open(jsonl_file, "r") as f:
+                    for line in f:
+                        try:
+                            data = json.loads(line.strip())
+                            formatted_message = format_markdown_message(data)
+                            if formatted_message:
+                                message_content.extend(formatted_message.split('\n'))
+                        except (json.JSONDecodeError, KeyError, TypeError):
+                            # Skip malformed lines
+                            continue
+                
+                # Filter out empty messages
+                filtered_messages = filter_empty_messages(message_content)
+                markdown_content.extend(filtered_messages)
+                
+                # Write to file
+                with open(output_path, "w", encoding="utf-8") as f:
+                    f.write("\n".join(markdown_content))
+                    
+                print(f"  ✓ Exported to: {output_filename}")
+                processed_count += 1
+                
+            except Exception as e:
+                print(f"  ✗ Error processing {jsonl_file.name}: {e}")
+                skipped_count += 1
+                continue
+        
+        print(f"\nSummary:")
+        print(f"  Processed: {processed_count} files")
+        print(f"  Skipped: {skipped_count} files")
+        print(f"  Output directory: {output_dir}")
+        
+        return processed_count > 0
+        
+    except Exception as e:
+        print(f"Error during bulk export: {e}")
+        return False
+
 def main():
     """Main entry point"""
     if len(sys.argv) < 2:
@@ -842,6 +1078,20 @@ def main():
         # Export to Markdown - optional output directory
         output_dir = sys.argv[3] if len(sys.argv) >= 4 else "claude_chat"
         if export_markdown(sys.argv[2], output_dir):
+            sys.exit(0)
+        else:
+            sys.exit(1)
+    elif command == "export-filtered" and len(sys.argv) >= 3:
+        # Export to Markdown with empty messages filtered - optional output directory
+        output_dir = sys.argv[3] if len(sys.argv) >= 4 else "claude_chat"
+        if export_markdown_filtered(sys.argv[2], output_dir):
+            sys.exit(0)
+        else:
+            sys.exit(1)
+    elif command == "export-all-filtered" and len(sys.argv) >= 3:
+        # Export all sessions in directory to Markdown with empty messages filtered
+        output_dir = sys.argv[3] if len(sys.argv) >= 4 else "claude_chat"
+        if export_all_sessions_filtered(sys.argv[2], output_dir):
             sys.exit(0)
         else:
             sys.exit(1)
