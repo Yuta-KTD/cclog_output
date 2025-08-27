@@ -2,6 +2,8 @@
 
 Browse and view Claude Code conversation history using fzf.
 
+> **Note:** This is a fork of [choplin/cclog](https://github.com/choplin/cclog) with additional features and modifications.
+
 https://github.com/user-attachments/assets/5019c393-8082-4cbc-b2b5-ec0549585681
 
 The demo shows:
@@ -18,7 +20,7 @@ Add to your `~/.config/sheldon/plugins.toml`:
 
 ```toml
 [plugins.cclog]
-github = "choplin/cclog"
+github = "yutakatada/cclog_output"
 ```
 
 Then run:
@@ -32,14 +34,14 @@ sheldon lock --update
 Works with both bash and zsh:
 
 ```bash
-git clone https://github.com/choplin/cclog.git
+git clone https://github.com/yutakatada/cclog_output.git
 ```
 
 Add to your shell configuration:
 
 ```bash
 # For bash/zsh
-source /path/to/cclog/cclog.sh
+source /path/to/cclog_output/cclog.sh
 
 # For zsh with plugin managers (oh-my-zsh, etc)
 # The cclog.plugin.zsh will be loaded automatically
@@ -53,7 +55,7 @@ source /path/to/cclog/cclog.sh
 #### Oh-My-Zsh
 
 ```bash
-git clone https://github.com/choplin/cclog ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/cclog
+git clone https://github.com/yutakatada/cclog_output ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/cclog
 ```
 
 Then add `cclog` to the plugins array in your `~/.zshrc`:
@@ -65,31 +67,31 @@ plugins=(... cclog)
 #### Zinit
 
 ```bash
-zinit load choplin/cclog
+zinit load yutakatada/cclog_output
 ```
 
 #### Zplug
 
 ```bash
-zplug "choplin/cclog"
+zplug "yutakatada/cclog_output"
 ```
 
 #### Antigen
 
 ```bash
-antigen bundle choplin/cclog
+antigen bundle yutakatada/cclog_output
 ```
 
 #### Zgen
 
 ```bash
-zgen load choplin/cclog
+zgen load yutakatada/cclog_output
 ```
 
 #### Antibody
 
 ```bash
-antibody bundle choplin/cclog
+antibody bundle yutakatada/cclog_output
 ```
 
 </details>
@@ -196,3 +198,7 @@ pytest tests/ -v
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Credits
+
+This project is a fork of [choplin/cclog](https://github.com/choplin/cclog) by [Akihiro Okuno](https://github.com/choplin). Original work is under the MIT License.
