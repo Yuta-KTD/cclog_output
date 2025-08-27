@@ -108,6 +108,7 @@ cclog
 - `Ctrl-V`: View the full log in your pager
 - `Ctrl-P`: Return the file path
 - `Ctrl-R`: Resume the conversation with `claude -r`
+- `Ctrl-E`: Export session to Markdown file
 
 ### List all projects
 
@@ -148,6 +149,7 @@ cclog info ~/.claude/projects/*/session-id.jsonl
 - Interactive browsing with fzf
 - Browse all projects across your system sorted by recent activity
 - Resume conversations directly from the browser
+- Export sessions to Markdown files with structured formatting
 - Performance optimized with Python helper script for large conversation histories
 - Stream-based processing for efficient memory usage
 - Duration and message count columns in the conversation list

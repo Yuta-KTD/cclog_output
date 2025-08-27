@@ -7,8 +7,8 @@ import json
 import os
 import sys
 import time
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
 
@@ -305,7 +305,7 @@ def get_session_list(project_dir):
     # Print all headers (will be made non-searchable by --header-lines=4)
     print(f"Claude Code Sessions for: {Path.cwd()}")
     print("Enter: Return session ID, Ctrl-v: View log")
-    print("Ctrl-p: Return path, Ctrl-r: Resume conversation")
+    print("Ctrl-p: Return path, Ctrl-r: Resume conversation, Ctrl-e: Export to Markdown")
     print("CREATED             MODIFIED DURATION MESSAGES  FIRST_MESSAGE")
 
     # Get terminal width for proper truncation
@@ -696,6 +696,134 @@ def get_projects_list():
         )
 
 
+def format_markdown_message(data):
+    """Format a single message for Markdown output"""
+    msg_type = data.get("type", "")
+    if msg_type not in ["user", "assistant"]:
+        return None
+
+    # Extract timestamp
+    timestamp = data.get("timestamp", "")
+    time_str = format_timestamp_as_time(timestamp)
+
+    # Extract message content
+    message = data.get("message", {})
+    content = message.get("content", "")
+    
+    # Parse message content
+    is_tool, message_text = parse_message_content(msg_type, content)
+    
+    # Format based on message type
+    if msg_type == "user":
+        role = "User"
+    else:
+        role = "Assistant"
+    
+    # Handle tool messages
+    if is_tool:
+        if msg_type == "assistant" and isinstance(content, list) and content:
+            # Tool use
+            tool_name = content[0].get("name", "unknown")
+            tool_input = content[0].get("input", {})
+            return f"## {role} ({time_str})\n\n### Tool: {tool_name}\n\n```json\n{json.dumps(tool_input, indent=2)}\n```\n\n"
+        elif msg_type == "user":
+            # Tool result
+            tool_result = data.get("toolUseResult", [])
+            if tool_result and isinstance(tool_result, list):
+                result_text = ""
+                for item in tool_result:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        result_text += item.get("text", "")
+                return f"## {role} ({time_str})\n\n### Tool Result\n\n```\n{result_text}\n```\n\n"
+    
+    # Handle regular text messages
+    if isinstance(content, list) and content:
+        # Extract text from content array
+        text_content = ""
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                text_content += item.get("text", "")
+    elif isinstance(content, str):
+        text_content = content
+    else:
+        text_content = message_text
+    
+    return f"## {role} ({time_str})\n\n{text_content}\n\n"
+
+
+def export_markdown(file_path, output_dir="claude_chat"):
+    """Export session to Markdown format"""
+    import os
+    from pathlib import Path
+    from datetime import datetime
+    
+    try:
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Convert file_path to Path object for parse_session_minimal
+        file_path_obj = Path(file_path)
+        
+        # Parse session info for metadata
+        session_info = parse_session_minimal(file_path_obj)
+        if not session_info:
+            print(f"Error: Could not parse session info from {file_path}")
+            return False
+            
+        # Generate output filename
+        session_id = os.path.basename(file_path).replace('.jsonl', '')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_filename = f"{session_id}_{timestamp}.md"
+        output_path = os.path.join(output_dir, output_filename)
+        
+        # Start building markdown content
+        markdown_content = []
+        markdown_content.append(f"# Claude Code Session {session_id}")
+        markdown_content.append("")
+        
+        # Add session metadata
+        if session_info.start_timestamp:
+            start_date = session_info.start_timestamp.strftime("%Y-%m-%d")
+            markdown_content.append(f"**Date**: {start_date}")
+        
+        if session_info.duration_seconds > 0:
+            duration_str = session_info.formatted_duration
+            markdown_content.append(f"**Duration**: {duration_str}")
+            
+        if session_info.line_count:
+            markdown_content.append(f"**Messages**: {session_info.line_count}")
+        
+        if session_info.matched_summaries:
+            summary_text = ", ".join(session_info.matched_summaries)
+            markdown_content.append(f"**Summary**: {summary_text}")
+            
+        markdown_content.append("")
+        markdown_content.append("---")
+        markdown_content.append("")
+        
+        # Process messages
+        with open(file_path, "r") as f:
+            for line in f:
+                try:
+                    data = json.loads(line.strip())
+                    formatted_message = format_markdown_message(data)
+                    if formatted_message:
+                        markdown_content.append(formatted_message)
+                except (json.JSONDecodeError, KeyError, TypeError):
+                    # Skip malformed lines
+                    continue
+        
+        # Write to file
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(markdown_content))
+            
+        print(f"Exported to: {output_path}")
+        return True
+        
+    except Exception as e:
+        print(f"Error exporting to Markdown: {e}")
+        return False
+
 def main():
     """Main entry point"""
     if len(sys.argv) < 2:
@@ -710,6 +838,13 @@ def main():
         get_session_info(sys.argv[2])
     elif command == "view" and len(sys.argv) >= 3:
         view_session(sys.argv[2])
+    elif command == "export" and len(sys.argv) >= 3:
+        # Export to Markdown - optional output directory
+        output_dir = sys.argv[3] if len(sys.argv) >= 4 else "claude_chat"
+        if export_markdown(sys.argv[2], output_dir):
+            sys.exit(0)
+        else:
+            sys.exit(1)
     elif command == "projects":
         get_projects_list()
     elif command == "decode" and len(sys.argv) >= 3:

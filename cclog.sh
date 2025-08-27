@@ -137,7 +137,7 @@ __cclog_browse() {
         --height="100%" \
         --ansi \
         --bind "ctrl-r:execute(claude -r {-1})+abort" \
-        --expect="ctrl-v,ctrl-p")
+        --expect="ctrl-v,ctrl-p,ctrl-e")
 
     # Process result
     if [ -n "$result" ]; then
@@ -162,6 +162,20 @@ __cclog_browse() {
             ctrl-p)
                 # Return file path
                 printf "%s\n" "$claude_projects_dir/${full_id}.jsonl"
+                ;;
+            ctrl-e)
+                # Export to Markdown
+                local selected_file="$claude_projects_dir/${full_id}.jsonl"
+                if [ -f "$CCLOG_HELPER_SCRIPT" ] && [ -n "$CCLOG_PYTHON" ]; then
+                    echo "Exporting session to Markdown..."
+                    if "$CCLOG_PYTHON" "$CCLOG_HELPER_SCRIPT" export "$selected_file" "claude_chat"; then
+                        echo "Export completed successfully!"
+                    else
+                        echo "Export failed!" >&2
+                    fi
+                else
+                    echo "Error: Python 3 is required for export" >&2
+                fi
                 ;;
             *)
                 # Default: return session ID
