@@ -154,11 +154,13 @@ cclog export-all-filtered /path/to/project
 ```
 
 This command will:
-- Process all `.jsonl` files in the project's Claude logs directory
-- Create filtered Markdown files (with empty messages removed) in the `claude_chat` directory
+- Process the **latest 30** `.jsonl` files in the project's Claude logs directory (sorted by modification time)
+- Create filtered Markdown files (with empty messages removed) in the `claude_chat` directory  
 - Show progress for each file processed
 - Skip invalid or corrupted session files
 - Provide a summary of processed and skipped files
+
+**Note**: The 30-file limit helps keep processing time reasonable and focuses on recent conversations. If you have more than 30 session files, only the most recently modified ones will be processed.
 
 ## Requirements
 

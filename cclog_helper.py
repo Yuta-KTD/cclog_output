@@ -949,7 +949,7 @@ def export_markdown_filtered(file_path, output_dir="claude_chat"):
         print(f"Error exporting to Markdown: {e}")
         return False
 
-def export_all_sessions_filtered(claude_projects_dir, output_dir="claude_chat"):
+def export_all_sessions_filtered(claude_projects_dir, output_dir="claude_chat", limit=30):
     """Export all sessions in a directory to Markdown format with empty messages filtered"""
     import os
     from pathlib import Path
@@ -972,8 +972,18 @@ def export_all_sessions_filtered(claude_projects_dir, output_dir="claude_chat"):
         if not jsonl_files:
             print(f"No .jsonl files found in {claude_projects_dir}")
             return True
-            
-        print(f"Found {len(jsonl_files)} session files to process...")
+        
+        # Store original count for summary
+        total_files = len(jsonl_files)
+        
+        # Sort files by modification time (newest first) and limit to specified number
+        jsonl_files.sort(key=lambda f: f.stat().st_mtime, reverse=True)
+        
+        if len(jsonl_files) > limit:
+            print(f"Found {len(jsonl_files)} session files, processing latest {limit}...")
+            jsonl_files = jsonl_files[:limit]
+        else:
+            print(f"Found {len(jsonl_files)} session files to process...")
         
         processed_count = 0
         skipped_count = 0
@@ -1052,6 +1062,8 @@ def export_all_sessions_filtered(claude_projects_dir, output_dir="claude_chat"):
         print(f"\nSummary:")
         print(f"  Processed: {processed_count} files")
         print(f"  Skipped: {skipped_count} files")
+        if total_files > limit:
+            print(f"  Total files in directory: {total_files} (limited to latest {limit})")
         print(f"  Output directory: {output_dir}")
         
         return processed_count > 0
@@ -1090,8 +1102,10 @@ def main():
             sys.exit(1)
     elif command == "export-all-filtered" and len(sys.argv) >= 3:
         # Export all sessions in directory to Markdown with empty messages filtered
+        # Usage: export-all-filtered <dir> [output_dir] [limit]
         output_dir = sys.argv[3] if len(sys.argv) >= 4 else "claude_chat"
-        if export_all_sessions_filtered(sys.argv[2], output_dir):
+        limit = int(sys.argv[4]) if len(sys.argv) >= 5 else 30
+        if export_all_sessions_filtered(sys.argv[2], output_dir, limit):
             sys.exit(0)
         else:
             sys.exit(1)

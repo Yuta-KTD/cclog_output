@@ -418,7 +418,7 @@ class TestExportMarkdown(unittest.TestCase):
         
         output_dir = os.path.join(self.temp_dir, "bulk_export_test")
         
-        # Test bulk export
+        # Test bulk export with default limit (30)
         success = export_all_sessions_filtered(test_sessions_dir, output_dir)
         
         self.assertTrue(success)
@@ -439,6 +439,57 @@ class TestExportMarkdown(unittest.TestCase):
         
         self.assertIn("(Filtered)", content)
         self.assertIn("**Date**: 2025-01-15", content)
+
+    def test_export_all_sessions_filtered_with_limit(self):
+        """Test bulk export with custom limit"""
+        import time
+        
+        # Create a test directory with multiple session files
+        test_sessions_dir = os.path.join(self.temp_dir, "test_sessions_limit")
+        os.makedirs(test_sessions_dir)
+        
+        # Create 5 test session files with different modification times
+        session_files = []
+        for i in range(5):
+            session_file = os.path.join(test_sessions_dir, f"session_{i+1}.jsonl")
+            test_data = [
+                {
+                    "type": "user",
+                    "message": {
+                        "role": "user",
+                        "content": f"Hello from session {i+1}"
+                    },
+                    "timestamp": "2025-01-15T10:30:00.000Z",
+                    "uuid": f"user-uuid-{i+1}",
+                    "sessionId": f"test-session-{i+1}"
+                }
+            ]
+            
+            with open(session_file, "w") as f:
+                for item in test_data:
+                    f.write(json.dumps(item) + "\n")
+            
+            # Modify file times to ensure different modification times
+            # Sleep briefly to ensure different timestamps
+            time.sleep(0.1)
+            session_files.append(session_file)
+        
+        output_dir = os.path.join(self.temp_dir, "bulk_export_limit_test")
+        
+        # Test bulk export with limit of 3 files
+        success = export_all_sessions_filtered(test_sessions_dir, output_dir, limit=3)
+        
+        self.assertTrue(success)
+        self.assertTrue(os.path.exists(output_dir))
+        
+        # Should only process 3 files (the latest ones)
+        output_files = os.listdir(output_dir)
+        self.assertEqual(len(output_files), 3)
+        
+        # Check that all files have the _filtered_ suffix and .md extension
+        for output_file in output_files:
+            self.assertTrue(output_file.endswith('.md'))
+            self.assertIn('_filtered_', output_file)
 
     def test_export_all_sessions_filtered_empty_directory(self):
         """Test bulk export with empty directory"""
