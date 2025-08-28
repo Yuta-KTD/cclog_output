@@ -271,7 +271,7 @@ cclog() {
         local target_dir="${1:-$(pwd)}"
         
         # Convert "/" to "-" and "." to "-" for project directory name
-        local project_dir=$(echo "$target_dir" | sed 's/\//-/g; s/\./-/g')
+        local project_dir=$(echo "$target_dir" | sed 's/\//-/g; s/\./-/g; s/_/-/g')
         local claude_projects_dir="$HOME/.claude/projects/$project_dir"
         
         # Check if the directory exists
