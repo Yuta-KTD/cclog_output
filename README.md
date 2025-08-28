@@ -20,7 +20,7 @@ Add to your `~/.config/sheldon/plugins.toml`:
 
 ```toml
 [plugins.cclog]
-github = "yutakatada/cclog_output"
+github = "Yuta-KTD/cclog_output"
 ```
 
 Then run:
@@ -34,7 +34,7 @@ sheldon lock --update
 Works with both bash and zsh:
 
 ```bash
-git clone https://github.com/yutakatada/cclog_output.git
+git clone https://github.com/Yuta-KTD/cclog_output.git
 ```
 
 Add to your shell configuration:
