@@ -55,7 +55,7 @@ source /path/to/cclog_output/cclog.sh
 #### Oh-My-Zsh
 
 ```bash
-git clone https://github.com/yutakatada/cclog_output ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/cclog
+git clone https://github.com/Yuta-KTD/cclog_output ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/cclog
 ```
 
 Then add `cclog` to the plugins array in your `~/.zshrc`:
@@ -67,31 +67,31 @@ plugins=(... cclog)
 #### Zinit
 
 ```bash
-zinit load yutakatada/cclog_output
+zinit load Yuta-KTD/cclog_output
 ```
 
 #### Zplug
 
 ```bash
-zplug "yutakatada/cclog_output"
+zplug "Yuta-KTD/cclog_output"
 ```
 
 #### Antigen
 
 ```bash
-antigen bundle yutakatada/cclog_output
+antigen bundle Yuta-KTD/cclog_output
 ```
 
 #### Zgen
 
 ```bash
-zgen load yutakatada/cclog_output
+zgen load Yuta-KTD/cclog_output
 ```
 
 #### Antibody
 
 ```bash
-antibody bundle yutakatada/cclog_output
+antibody bundle Yuta-KTD/cclog_output
 ```
 
 </details>
