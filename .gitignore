@@ -30,5 +30,4 @@ __pycache__/
 /tmp/
 
 # Claude Code specific
-.claude/
 .serena/
