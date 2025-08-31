@@ -28,6 +28,12 @@ class SessionSummary:
     last_timestamp: Optional[datetime] = None
     line_count: Optional[int] = None
     matched_summaries: Optional[list] = None
+    user_count: Optional[int] = None
+    assistant_count: Optional[int] = None
+    total_messages: Optional[int] = None
+    actual_user_messages: Optional[int] = None
+    actual_assistant_messages: Optional[int] = None
+    actual_total_messages: Optional[int] = None
 
     @property
     def duration_seconds(self) -> int:
@@ -152,6 +158,9 @@ def parse_session_minimal(
         first_user_msg = ""
         last_line = None
         line_count = 0
+        user_count = 0
+        assistant_count = 0
+        total_messages = 0
         matched_summaries = []
         assistant_uuids_checked = set()  # Track checked UUIDs to avoid duplicates
 
@@ -168,6 +177,15 @@ def parse_session_minimal(
                 # Try to parse JSON from this line
                 try:
                     data = json.loads(stripped_line)
+
+                    # Count message types
+                    msg_type = data.get("type")
+                    if msg_type == "user":
+                        user_count += 1
+                        total_messages += 1
+                    elif msg_type == "assistant":
+                        assistant_count += 1
+                        total_messages += 1
 
                     # Look for first timestamp
                     if not start_timestamp:
@@ -217,6 +235,9 @@ def parse_session_minimal(
             last_timestamp=last_timestamp,
             line_count=line_count,
             matched_summaries=matched_summaries if matched_summaries else None,
+            user_count=user_count if user_count > 0 else None,
+            assistant_count=assistant_count if assistant_count > 0 else None,
+            total_messages=total_messages if total_messages > 0 else None,
         )
     except Exception:
         return None
@@ -750,6 +771,27 @@ def format_markdown_message(data):
     
     return f"## {role} ({time_str})\n\n{text_content}\n\n"
 
+def count_actual_messages_in_session(file_path):
+    """Count actual ## User and ## Assistant messages that will appear in Markdown"""
+    actual_user_count = 0
+    actual_assistant_count = 0
+    
+    with open(file_path, "r") as f:
+        for line in f:
+            try:
+                data = json.loads(line.strip())
+                formatted_message = format_markdown_message(data)
+                if formatted_message:
+                    if formatted_message.startswith("## User"):
+                        actual_user_count += 1
+                    elif formatted_message.startswith("## Assistant"):
+                        actual_assistant_count += 1
+            except (json.JSONDecodeError, KeyError, TypeError):
+                # Skip malformed lines
+                continue
+    
+    return actual_user_count, actual_assistant_count
+
 
 def export_markdown(file_path, output_dir="claude_chat"):
     """Export session to Markdown format"""
@@ -769,6 +811,12 @@ def export_markdown(file_path, output_dir="claude_chat"):
         if not session_info:
             print(f"Error: Could not parse session info from {file_path}")
             return False
+        
+        # Count actual messages that will appear in Markdown
+        actual_user_count, actual_assistant_count = count_actual_messages_in_session(file_path)
+        session_info.actual_user_messages = actual_user_count
+        session_info.actual_assistant_messages = actual_assistant_count
+        session_info.actual_total_messages = actual_user_count + actual_assistant_count
             
         # Generate output filename
         session_id = os.path.basename(file_path).replace('.jsonl', '')
@@ -792,6 +840,13 @@ def export_markdown(file_path, output_dir="claude_chat"):
             
         if session_info.line_count:
             markdown_content.append(f"**Messages**: {session_info.line_count}")
+        
+        if session_info.actual_total_messages:
+            markdown_content.append(f"**Total Messages**: {session_info.actual_total_messages}")
+        if session_info.actual_user_messages:
+            markdown_content.append(f"**User Messages**: {session_info.actual_user_messages}")
+        if session_info.actual_assistant_messages:
+            markdown_content.append(f"**Assistant Messages**: {session_info.actual_assistant_messages}")
         
         if session_info.matched_summaries:
             summary_text = ", ".join(session_info.matched_summaries)
@@ -889,6 +944,12 @@ def export_markdown_filtered(file_path, output_dir="claude_chat"):
         if not session_info:
             print(f"Error: Could not parse session info from {file_path}")
             return False
+        
+        # Count actual messages that will appear in Markdown
+        actual_user_count, actual_assistant_count = count_actual_messages_in_session(file_path)
+        session_info.actual_user_messages = actual_user_count
+        session_info.actual_assistant_messages = actual_assistant_count
+        session_info.actual_total_messages = actual_user_count + actual_assistant_count
             
         # Generate output filename with _filtered suffix
         session_id = os.path.basename(file_path).replace('.jsonl', '')
@@ -912,6 +973,13 @@ def export_markdown_filtered(file_path, output_dir="claude_chat"):
             
         if session_info.line_count:
             markdown_content.append(f"**Messages**: {session_info.line_count}")
+        
+        if session_info.actual_total_messages:
+            markdown_content.append(f"**Total Messages**: {session_info.actual_total_messages}")
+        if session_info.actual_user_messages:
+            markdown_content.append(f"**User Messages**: {session_info.actual_user_messages}")
+        if session_info.actual_assistant_messages:
+            markdown_content.append(f"**Assistant Messages**: {session_info.actual_assistant_messages}")
         
         if session_info.matched_summaries:
             summary_text = ", ".join(session_info.matched_summaries)
@@ -998,6 +1066,12 @@ def export_all_sessions_filtered(claude_projects_dir, output_dir="claude_chat", 
                     print(f"  Skipping {jsonl_file.name}: Could not parse session info")
                     skipped_count += 1
                     continue
+                
+                # Count actual messages that will appear in Markdown
+                actual_user_count, actual_assistant_count = count_actual_messages_in_session(str(jsonl_file))
+                session_info.actual_user_messages = actual_user_count
+                session_info.actual_assistant_messages = actual_assistant_count
+                session_info.actual_total_messages = actual_user_count + actual_assistant_count
                     
                 # Generate output filename with _filtered suffix and timestamp
                 session_id = jsonl_file.stem
@@ -1021,6 +1095,13 @@ def export_all_sessions_filtered(claude_projects_dir, output_dir="claude_chat", 
                     
                 if session_info.line_count:
                     markdown_content.append(f"**Messages**: {session_info.line_count}")
+                
+                if session_info.actual_total_messages:
+                    markdown_content.append(f"**Total Messages**: {session_info.actual_total_messages}")
+                if session_info.actual_user_messages:
+                    markdown_content.append(f"**User Messages**: {session_info.actual_user_messages}")
+                if session_info.actual_assistant_messages:
+                    markdown_content.append(f"**Assistant Messages**: {session_info.actual_assistant_messages}")
                 
                 if session_info.matched_summaries:
                     summary_text = ", ".join(session_info.matched_summaries)

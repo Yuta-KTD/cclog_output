@@ -112,8 +112,8 @@ __cclog_browse() {
     # If directory argument provided, use it; otherwise use current directory
     local target_dir="${1:-$(pwd)}"
 
-    # Convert "/" to "-" and "." to "-" for project directory name
-    local project_dir=$(echo "$target_dir" | sed 's/\//-/g; s/\./-/g')
+    # Convert "/" to "-", "." to "-", and "_" to "-" for project directory name
+    local project_dir=$(echo "$target_dir" | sed 's/\//-/g; s/\./-/g; s/_/-/g')
 
     local claude_projects_dir="$HOME/.claude/projects/$project_dir"
 
@@ -270,7 +270,7 @@ cclog() {
         # Export all sessions in current project to filtered Markdown
         local target_dir="${1:-$(pwd)}"
         
-        # Convert "/" to "-" and "." to "-" for project directory name
+        # Convert "/" to "-", "." to "-", and "_" to "-" for project directory name
         local project_dir=$(echo "$target_dir" | sed 's/\//-/g; s/\./-/g; s/_/-/g')
         local claude_projects_dir="$HOME/.claude/projects/$project_dir"
         
