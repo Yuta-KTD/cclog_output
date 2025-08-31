@@ -792,6 +792,37 @@ def count_actual_messages_in_session(file_path):
     
     return actual_user_count, actual_assistant_count
 
+def count_actual_messages_in_session_filtered(file_path):
+    """Count actual ## User and ## Assistant messages after filtering empty messages"""
+    # Process messages the same way as export_markdown_filtered
+    message_content = []
+    
+    with open(file_path, "r") as f:
+        for line in f:
+            try:
+                data = json.loads(line.strip())
+                formatted_message = format_markdown_message(data)
+                if formatted_message:
+                    message_content.extend(formatted_message.split('\n'))
+            except (json.JSONDecodeError, KeyError, TypeError):
+                # Skip malformed lines
+                continue
+    
+    # Apply the same filtering logic as export_markdown_filtered
+    filtered_messages = filter_empty_messages(message_content)
+    
+    # Count ## User and ## Assistant headers in filtered content
+    actual_user_count = 0
+    actual_assistant_count = 0
+    
+    for line in filtered_messages:
+        if line.startswith("## User"):
+            actual_user_count += 1
+        elif line.startswith("## Assistant"):
+            actual_assistant_count += 1
+    
+    return actual_user_count, actual_assistant_count
+
 
 def export_markdown(file_path, output_dir="claude_chat"):
     """Export session to Markdown format"""
@@ -945,8 +976,8 @@ def export_markdown_filtered(file_path, output_dir="claude_chat"):
             print(f"Error: Could not parse session info from {file_path}")
             return False
         
-        # Count actual messages that will appear in Markdown
-        actual_user_count, actual_assistant_count = count_actual_messages_in_session(file_path)
+        # Count actual messages that will appear in Markdown (filtered)
+        actual_user_count, actual_assistant_count = count_actual_messages_in_session_filtered(file_path)
         session_info.actual_user_messages = actual_user_count
         session_info.actual_assistant_messages = actual_assistant_count
         session_info.actual_total_messages = actual_user_count + actual_assistant_count
@@ -1067,8 +1098,8 @@ def export_all_sessions_filtered(claude_projects_dir, output_dir="claude_chat", 
                     skipped_count += 1
                     continue
                 
-                # Count actual messages that will appear in Markdown
-                actual_user_count, actual_assistant_count = count_actual_messages_in_session(str(jsonl_file))
+                # Count actual messages that will appear in Markdown (filtered)
+                actual_user_count, actual_assistant_count = count_actual_messages_in_session_filtered(str(jsonl_file))
                 session_info.actual_user_messages = actual_user_count
                 session_info.actual_assistant_messages = actual_assistant_count
                 session_info.actual_total_messages = actual_user_count + actual_assistant_count
